@@ -28,22 +28,28 @@ jobs:
         include:
           - runner: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-            executable_suffix: ""
+            build_bwrap: true
+            extra_binaries: ""
           - runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            executable_suffix: ""
+            build_bwrap: true
+            extra_binaries: ""
           - runner: windows-2025
             target: x86_64-pc-windows-msvc
-            executable_suffix: ".exe"
+            build_bwrap: false
+            extra_binaries: "codex-windows-sandbox-setup codex-command-runner"
           - runner: windows-11-arm
             target: aarch64-pc-windows-msvc
-            executable_suffix: ".exe"
+            build_bwrap: false
+            extra_binaries: "codex-windows-sandbox-setup codex-command-runner"
           - runner: macos-15-intel
             target: x86_64-apple-darwin
-            executable_suffix: ""
+            build_bwrap: false
+            extra_binaries: ""
           - runner: macos-15
             target: aarch64-apple-darwin
-            executable_suffix: ""
+            build_bwrap: false
+            extra_binaries: ""
 
     steps:
       - name: Checkout repository
@@ -61,30 +67,91 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends clang cmake libssl-dev pkg-config
+          sudo apt-get install --yes --no-install-recommends binutils clang cmake libcap-dev libssl-dev pkg-config
+
+      - name: Configure rusty_v8 artifact overrides
+        if: runner.os != 'Windows'
+        uses: ./.github/actions/setup-rusty-v8
+        with:
+          target: ${{ matrix.target }}
 
       - name: Configure Windows SQLite build
-        if: runner.os == 'Windows'
+        if: matrix.target == 'x86_64-pc-windows-msvc'
         shell: pwsh
         run: Add-Content -Path $env:GITHUB_ENV -Value 'LIBSQLITE3_FLAGS=SQLITE_DISABLE_INTRINSIC'
 
+      - name: Build Linux sandbox and export digest
+        if: matrix.build_bwrap
+        working-directory: codex-rs
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ matrix.target }}"
+          cargo build --locked --release --target "$target" --bin bwrap
+
+          bwrap_path="target/${target}/release/bwrap"
+          strip --strip-debug --strip-unneeded "$bwrap_path"
+          digest="$(sha256sum "$bwrap_path" | awk '{print $1}')"
+          echo "CODEX_BWRAP_SHA256=${digest}" >> "$GITHUB_ENV"
+
       - name: Build Codex binaries
         working-directory: codex-rs
-        run: cargo build --locked --release --target ${{ matrix.target }} --bin codex --bin codex-app-server --bin codex-code-mode-host
-
-      - name: Stage artifact
-        shell: pwsh
-        env:
-          EXE_SUFFIX: ${{ matrix.executable_suffix }}
+        shell: bash
         run: |
-          $artifactDir = Join-Path $env:GITHUB_WORKSPACE 'artifact'
-          New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+          set -euo pipefail
+          build_args=(
+            --bin codex
+            --bin codex-app-server
+            --bin codex-code-mode-host
+            --bin codex-responses-api-proxy
+          )
+          for binary in ${{ matrix.extra_binaries }}; do
+            build_args+=(--bin "$binary")
+          done
+          cargo build --locked --release --target "${{ matrix.target }}" "${build_args[@]}"
 
-          @('codex', 'codex-app-server', 'codex-code-mode-host') | ForEach-Object {
-            $binary = "$_$env:EXE_SUFFIX"
-            $source = Join-Path $env:GITHUB_WORKSPACE "codex-rs/target/${{ matrix.target }}/release/$binary"
-            Copy-Item -LiteralPath $source -Destination (Join-Path $artifactDir $binary)
-          }
+      - name: Build complete runtime packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ matrix.target }}"
+          release_dir="${GITHUB_WORKSPACE}/codex-rs/target/${target}/release"
+          artifact_dir="${GITHUB_WORKSPACE}/artifact"
+          exe_suffix=""
+          resource_args=()
+
+          if [[ "$target" == *windows* ]]; then
+            exe_suffix=".exe"
+            resource_args+=(
+              --codex-command-runner-bin "${release_dir}/codex-command-runner.exe"
+              --codex-windows-sandbox-setup-bin "${release_dir}/codex-windows-sandbox-setup.exe"
+            )
+          elif [[ "$target" == *linux* ]]; then
+            resource_args+=(--bwrap-bin "${release_dir}/bwrap")
+          fi
+
+          mkdir -p "${artifact_dir}/tools"
+          cp "${release_dir}/codex-responses-api-proxy${exe_suffix}" "${artifact_dir}/tools/"
+
+          python "${GITHUB_WORKSPACE}/scripts/build_codex_package.py" \
+            --target "$target" \
+            --variant codex \
+            --cargo-profile release \
+            --entrypoint-bin "${release_dir}/codex${exe_suffix}" \
+            --code-mode-host-bin "${release_dir}/codex-code-mode-host${exe_suffix}" \
+            "${resource_args[@]}" \
+            --package-dir "${artifact_dir}/codex" \
+            --force
+
+          python "${GITHUB_WORKSPACE}/scripts/build_codex_package.py" \
+            --target "$target" \
+            --variant codex-app-server \
+            --cargo-profile release \
+            --entrypoint-bin "${release_dir}/codex-app-server${exe_suffix}" \
+            --code-mode-host-bin "${release_dir}/codex-code-mode-host${exe_suffix}" \
+            "${resource_args[@]}" \
+            --package-dir "${artifact_dir}/codex-app-server" \
+            --force
 
       - name: Upload GitHub Actions artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
