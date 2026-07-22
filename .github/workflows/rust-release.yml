@@ -19,19 +19,31 @@ env:
 
 jobs:
   build:
-    name: Build ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
             executable_suffix: ""
-          - os: macos-latest
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
             executable_suffix: ""
-          - os: windows-latest
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
             executable_suffix: ".exe"
+          - runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            executable_suffix: ".exe"
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            executable_suffix: ""
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            executable_suffix: ""
 
     steps:
       - name: Checkout repository
@@ -41,6 +53,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
@@ -56,13 +70,7 @@ jobs:
 
       - name: Build Codex binaries
         working-directory: codex-rs
-        shell: bash
-        run: |
-          set -euo pipefail
-          cargo build --locked --release \
-            --bin codex \
-            --bin codex-app-server \
-            --bin codex-code-mode-host
+        run: cargo build --locked --release --target ${{ matrix.target }} --bin codex --bin codex-app-server --bin codex-code-mode-host
 
       - name: Stage artifact
         shell: pwsh
@@ -74,14 +82,14 @@ jobs:
 
           @('codex', 'codex-app-server', 'codex-code-mode-host') | ForEach-Object {
             $binary = "$_$env:EXE_SUFFIX"
-            $source = Join-Path $env:GITHUB_WORKSPACE "codex-rs/target/release/$binary"
+            $source = Join-Path $env:GITHUB_WORKSPACE "codex-rs/target/${{ matrix.target }}/release/$binary"
             Copy-Item -LiteralPath $source -Destination (Join-Path $artifactDir $binary)
           }
 
       - name: Upload GitHub Actions artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: codexext-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
+          name: codexext-${{ matrix.target }}-${{ github.sha }}
           path: artifact/*
           if-no-files-found: error
           retention-days: 30
