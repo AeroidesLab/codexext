@@ -1961,6 +1961,7 @@ dependencies = [
  "codex-analytics",
  "codex-app-server-protocol",
  "codex-app-server-transport",
+ "codex-apply-patch",
  "codex-arg0",
  "codex-backend-client",
  "codex-chatgpt",

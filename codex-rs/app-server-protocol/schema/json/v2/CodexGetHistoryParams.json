@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Read a thread's history in either structured or projected plain-text form.",
+  "properties": {
+    "mode": {
+      "description": "`\"full\"` returns structured turns; `\"compact\"` returns a plain-text projection of the same projected history. Defaults to `\"compact\"`.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "threadId": {
+      "description": "Thread to read.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "threadId"
+  ],
+  "title": "CodexGetHistoryParams",
+  "type": "object"
+}

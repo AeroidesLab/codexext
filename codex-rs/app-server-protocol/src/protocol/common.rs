@@ -804,6 +804,25 @@ client_request_definitions! {
         serialization: fs_watch_id(params.watch_id),
         response: v2::FsUnwatchResponse,
     },
+    /// Apply a patch to an existing thread's workspace through the native
+    /// file-change approval chain (`item/fileChange/requestApproval`).
+    CodexApplyPatch => "codex/applyPatch" {
+        params: v2::CodexApplyPatchParams,
+        serialization: thread_id(params.thread_id),
+        response: v2::CodexApplyPatchResponse,
+    },
+    /// Read a thread's history as structured turns or a compact text projection.
+    CodexGetHistory => "codex/getHistory" {
+        params: v2::CodexGetHistoryParams,
+        serialization: thread_id(params.thread_id),
+        response: v2::CodexGetHistoryResponse,
+    },
+    /// Fork a child thread from a parent thread and start its first turn.
+    CodexSpawnAgent => "codex/spawnAgent" {
+        params: v2::CodexSpawnAgentParams,
+        serialization: thread_id(params.parent_thread_id),
+        response: v2::CodexSpawnAgentResponse,
+    },
     SkillsConfigWrite => "skills/config/write" {
         params: v2::SkillsConfigWriteParams,
         serialization: global("config"),

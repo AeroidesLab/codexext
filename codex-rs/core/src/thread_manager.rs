@@ -713,6 +713,12 @@ impl ThreadManager {
             .get_resumed_session_sources()
             .unwrap_or_else(|| (self.state.session_source.clone(), None));
         let session_source = options.session_source.unwrap_or(resumed_session_source);
+        let parent_thread_id = match &session_source {
+            SessionSource::SubAgent(SubAgentSource::ThreadSpawn {
+                parent_thread_id, ..
+            }) => Some(*parent_thread_id),
+            _ => None,
+        };
         let thread_source = options.thread_source.or(resumed_thread_source);
         Box::pin(self.state.spawn_thread_with_source(
             options.config,
@@ -722,7 +728,7 @@ impl ThreadManager {
             Arc::clone(&self.state.auth_manager),
             agent_control,
             session_source,
-            /*parent_thread_id*/ None,
+            parent_thread_id,
             forked_from_thread_id,
             thread_source,
             options.dynamic_tools,

@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Result of `codex/spawnAgent`.",
+  "properties": {
+    "childThreadId": {
+      "description": "Id of the forked child thread.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "childThreadId"
+  ],
+  "title": "CodexSpawnAgentResponse",
+  "type": "object"
+}

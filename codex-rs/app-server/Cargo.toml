@@ -35,6 +35,7 @@ axum = { workspace = true, default-features = false, features = [
 ] }
 codex-analytics = { workspace = true }
 codex-agent-extension = { workspace = true }
+codex-apply-patch = { workspace = true }
 codex-arg0 = { workspace = true }
 codex-cloud-config = { workspace = true }
 codex-config = { workspace = true }

@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Apply a patch to an existing thread's workspace through the native file-change approval chain.",
+  "properties": {
+    "cwd": {
+      "description": "Working directory used to resolve relative patch paths. Defaults to the thread's configured cwd.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "patch": {
+      "description": "Patch payload in the Codex `apply_patch` grammar (`*** Begin Patch` ... `*** End Patch`).",
+      "type": "string"
+    },
+    "reason": {
+      "description": "Optional explanatory reason surfaced in the approval request.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "threadId": {
+      "description": "Thread the patch is associated with. The thread must exist; the file-change approval request references this thread.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "patch",
+    "threadId"
+  ],
+  "title": "CodexApplyPatchParams",
+  "type": "object"
+}

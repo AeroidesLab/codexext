@@ -23,6 +23,7 @@ use crate::outgoing_message::RequestContext;
 use crate::request_processors::AccountRequestProcessor;
 use crate::request_processors::AppsRequestProcessor;
 use crate::request_processors::CatalogRequestProcessor;
+use crate::request_processors::CodexRequestProcessor;
 use crate::request_processors::CommandExecRequestProcessor;
 use crate::request_processors::ConfigRequestProcessor;
 use crate::request_processors::EnvironmentRequestProcessor;
@@ -106,6 +107,7 @@ pub(crate) struct MessageProcessor {
     account_processor: AccountRequestProcessor,
     apps_processor: AppsRequestProcessor,
     catalog_processor: CatalogRequestProcessor,
+    codex_processor: CodexRequestProcessor,
     command_exec_processor: CommandExecRequestProcessor,
     process_exec_processor: ProcessExecRequestProcessor,
     config_processor: ConfigRequestProcessor,
@@ -443,6 +445,13 @@ impl MessageProcessor {
             thread_list_state_permit,
             Arc::clone(&skills_watcher),
         );
+        let codex_processor = CodexRequestProcessor::new(
+            outgoing.clone(),
+            Arc::clone(&thread_manager),
+            Arc::clone(&environment_manager_for_requests),
+            thread_processor.clone(),
+            turn_processor.clone(),
+        );
         if matches!(plugin_startup_tasks, crate::PluginStartupTasks::Start) {
             // Keep plugin startup warmups aligned at app-server startup.
             let on_effective_plugins_changed =
@@ -486,6 +495,7 @@ impl MessageProcessor {
             account_processor,
             apps_processor,
             catalog_processor,
+            codex_processor,
             command_exec_processor,
             process_exec_processor,
             config_processor,
@@ -1013,6 +1023,27 @@ impl MessageProcessor {
             ClientRequest::FsUnwatch { params, .. } => self
                 .fs_processor
                 .unwatch(connection_id, params)
+                .await
+                .map(|response| Some(response.into())),
+            ClientRequest::CodexApplyPatch { params, .. } => self
+                .codex_processor
+                .apply_patch(connection_id, params)
+                .await
+                .map(|response| Some(response.into())),
+            ClientRequest::CodexGetHistory { params, .. } => self
+                .codex_processor
+                .get_history(params)
+                .await
+                .map(|response| Some(response.into())),
+            ClientRequest::CodexSpawnAgent { params, .. } => self
+                .codex_processor
+                .spawn_agent(
+                    request_id.clone(),
+                    params,
+                    app_server_client_name.clone(),
+                    client_version.clone(),
+                    supports_openai_form_elicitation,
+                )
                 .await
                 .map(|response| Some(response.into())),
             ClientRequest::ModelProviderCapabilitiesRead { params: _, .. } => self

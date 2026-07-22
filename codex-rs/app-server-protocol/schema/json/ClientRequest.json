@@ -288,6 +288,58 @@
       ],
       "type": "object"
     },
+    "CodexApplyPatchParams": {
+      "description": "Apply a patch to an existing thread's workspace through the native file-change approval chain.",
+      "properties": {
+        "cwd": {
+          "description": "Working directory used to resolve relative patch paths. Defaults to the thread's configured cwd.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "patch": {
+          "description": "Patch payload in the Codex `apply_patch` grammar (`*** Begin Patch` ... `*** End Patch`).",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Optional explanatory reason surfaced in the approval request.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "threadId": {
+          "description": "Thread the patch is associated with. The thread must exist; the file-change approval request references this thread.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "patch",
+        "threadId"
+      ],
+      "type": "object"
+    },
+    "CodexGetHistoryParams": {
+      "description": "Read a thread's history in either structured or projected plain-text form.",
+      "properties": {
+        "mode": {
+          "description": "`\"full\"` returns structured turns; `\"compact\"` returns a plain-text projection of the same projected history. Defaults to `\"compact\"`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "threadId": {
+          "description": "Thread to read.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "threadId"
+      ],
+      "type": "object"
+    },
     "CodexResponseHandoffMode": {
       "enum": [
         "thinking",
@@ -295,6 +347,38 @@
         "bemTags"
       ],
       "type": "string"
+    },
+    "CodexSpawnAgentParams": {
+      "description": "Fork a child thread from an existing parent thread and start its first turn with the supplied prompt.",
+      "properties": {
+        "agentRole": {
+          "description": "Optional role recorded in the child thread's metadata.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "description": "Optional model override for the child thread.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parentThreadId": {
+          "description": "Parent thread to fork from.",
+          "type": "string"
+        },
+        "prompt": {
+          "description": "Initial task given to the child thread.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "parentThreadId",
+        "prompt"
+      ],
+      "type": "object"
     },
     "CollaborationMode": {
       "description": "Collaboration mode for a Codex session.",
@@ -6222,6 +6306,81 @@
         "params"
       ],
       "title": "Fs/unwatchRequest",
+      "type": "object"
+    },
+    {
+      "description": "Apply a patch to an existing thread's workspace through the native file-change approval chain (`item/fileChange/requestApproval`).",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "codex/applyPatch"
+          ],
+          "title": "Codex/applyPatchRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/CodexApplyPatchParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Codex/applyPatchRequest",
+      "type": "object"
+    },
+    {
+      "description": "Read a thread's history as structured turns or a compact text projection.",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "codex/getHistory"
+          ],
+          "title": "Codex/getHistoryRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/CodexGetHistoryParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Codex/getHistoryRequest",
+      "type": "object"
+    },
+    {
+      "description": "Fork a child thread from a parent thread and start its first turn.",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/RequestId"
+        },
+        "method": {
+          "enum": [
+            "codex/spawnAgent"
+          ],
+          "title": "Codex/spawnAgentRequestMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/CodexSpawnAgentParams"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "params"
+      ],
+      "title": "Codex/spawnAgentRequest",
       "type": "object"
     },
     {

@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Result of `codex/applyPatch`.",
+  "properties": {
+    "applied": {
+      "description": "Whether the patch was approved and written to disk. `false` when the file-change approval request was declined or cancelled.",
+      "type": "boolean"
+    },
+    "fileChanges": {
+      "description": "Native paths of the files touched by the patch.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "applied",
+    "fileChanges"
+  ],
+  "title": "CodexApplyPatchResponse",
+  "type": "object"
+}
